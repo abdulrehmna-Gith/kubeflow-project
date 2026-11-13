@@ -1,0 +1,182 @@
+# PIPELINE DEFINITION
+# Name: yolo26-object-detection-pipeline
+# Description: YOLO26 object detection training and model registration pipeline
+components:
+  comp-run-existing-component:
+    executorLabel: exec-run-existing-component
+    inputDefinitions:
+      parameters:
+        script_name:
+          parameterType: STRING
+  comp-run-existing-component-2:
+    executorLabel: exec-run-existing-component-2
+    inputDefinitions:
+      parameters:
+        script_name:
+          parameterType: STRING
+  comp-run-existing-component-3:
+    executorLabel: exec-run-existing-component-3
+    inputDefinitions:
+      parameters:
+        script_name:
+          parameterType: STRING
+  comp-run-existing-component-4:
+    executorLabel: exec-run-existing-component-4
+    inputDefinitions:
+      parameters:
+        script_name:
+          parameterType: STRING
+  comp-run-existing-component-5:
+    executorLabel: exec-run-existing-component-5
+    inputDefinitions:
+      parameters:
+        script_name:
+          parameterType: STRING
+deploymentSpec:
+  executors:
+    exec-run-existing-component:
+      container:
+        args:
+        - '{{$.inputs.parameters[''script_name'']}}'
+        command:
+        - python
+        image: yolo26-kfp:1.0
+    exec-run-existing-component-2:
+      container:
+        args:
+        - '{{$.inputs.parameters[''script_name'']}}'
+        command:
+        - python
+        image: yolo26-kfp:1.0
+    exec-run-existing-component-3:
+      container:
+        args:
+        - '{{$.inputs.parameters[''script_name'']}}'
+        command:
+        - python
+        image: yolo26-kfp:1.0
+    exec-run-existing-component-4:
+      container:
+        args:
+        - '{{$.inputs.parameters[''script_name'']}}'
+        command:
+        - python
+        image: yolo26-kfp:1.0
+    exec-run-existing-component-5:
+      container:
+        args:
+        - '{{$.inputs.parameters[''script_name'']}}'
+        command:
+        - python
+        image: yolo26-kfp:1.0
+pipelineInfo:
+  description: YOLO26 object detection training and model registration pipeline
+  name: yolo26-object-detection-pipeline
+root:
+  dag:
+    tasks:
+      run-existing-component:
+        cachingOptions: {}
+        componentRef:
+          name: comp-run-existing-component
+        inputs:
+          parameters:
+            script_name:
+              runtimeValue:
+                constant: components/data_preparation.py
+        taskInfo:
+          name: 1 - Data Preparation
+      run-existing-component-2:
+        cachingOptions: {}
+        componentRef:
+          name: comp-run-existing-component-2
+        dependentTasks:
+        - run-existing-component
+        inputs:
+          parameters:
+            script_name:
+              runtimeValue:
+                constant: components/model_development.py
+        taskInfo:
+          name: 2 - Model Development
+      run-existing-component-3:
+        cachingOptions: {}
+        componentRef:
+          name: comp-run-existing-component-3
+        dependentTasks:
+        - run-existing-component-2
+        inputs:
+          parameters:
+            script_name:
+              runtimeValue:
+                constant: components/model_training.py
+        taskInfo:
+          name: 3 - Model Training
+      run-existing-component-4:
+        cachingOptions: {}
+        componentRef:
+          name: comp-run-existing-component-4
+        dependentTasks:
+        - run-existing-component-3
+        inputs:
+          parameters:
+            script_name:
+              runtimeValue:
+                constant: components/model_optimization.py
+        taskInfo:
+          name: 4 - Model Optimization
+      run-existing-component-5:
+        cachingOptions: {}
+        componentRef:
+          name: comp-run-existing-component-5
+        dependentTasks:
+        - run-existing-component-4
+        inputs:
+          parameters:
+            script_name:
+              runtimeValue:
+                constant: components/model_registry.py
+        taskInfo:
+          name: 5 - Model Registry
+schemaVersion: 2.1.0
+sdkVersion: kfp-2.18.0
+---
+platforms:
+  kubernetes:
+    deploymentSpec:
+      executors:
+        exec-run-existing-component:
+          pvcMount:
+          - constant: yolo26-workspace
+            mountPath: /workspace
+            pvcNameParameter:
+              runtimeValue:
+                constant: yolo26-workspace
+        exec-run-existing-component-2:
+          pvcMount:
+          - constant: yolo26-workspace
+            mountPath: /workspace
+            pvcNameParameter:
+              runtimeValue:
+                constant: yolo26-workspace
+        exec-run-existing-component-3:
+          pvcMount:
+          - constant: yolo26-workspace
+            mountPath: /workspace
+            pvcNameParameter:
+              runtimeValue:
+                constant: yolo26-workspace
+        exec-run-existing-component-4:
+          pvcMount:
+          - constant: yolo26-workspace
+            mountPath: /workspace
+            pvcNameParameter:
+              runtimeValue:
+                constant: yolo26-workspace
+        exec-run-existing-component-5:
+          pvcMount:
+          - constant: yolo26-workspace
+            mountPath: /workspace
+            pvcNameParameter:
+              runtimeValue:
+                constant: yolo26-workspace

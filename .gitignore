@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+kubenv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Dataset archives and data
+archive.zip
+
+# Generated model artifacts
+*.pt
+*.onnx
+*.engine
+*.safetensors
+
+# Generated outputs
+outputs/
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+
+# Kubeflow source checkout
+kfp-218-source/
+
+# Generated model directories
+models/
+model_registry/
+
+# Generated pipeline workspace
+outputs/
+
+# Other local project data
+yolo26n/
+
+*.cache
