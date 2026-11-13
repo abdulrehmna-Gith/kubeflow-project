@@ -1,1 +1,888 @@
-# kubeflow-project
+# YOLO26 Object Detection Pipeline Using Kubeflow, Kubernetes & Argo CD
+
+## 1. Project Overview
+
+This project implements an end-to-end Machine Learning pipeline for YOLO26 object detection using **Kubeflow Pipelines, Kubernetes, Docker, and Argo CD**.
+
+The main objective is to automate the Machine Learning lifecycle, starting from dataset preparation and ending with model optimization and registration.
+
+The project is divided into five main stages:
+
+1. Data Preparation
+2. Model Development
+3. Model Training
+4. Model Optimization
+5. Model Registry
+
+Each stage is implemented as a separate component to make the pipeline modular, reusable, and easier to debug.
+
+The project also uses Argo CD to manage Kubernetes resources through GitOps.
+
+## 2. Technologies Used
+
+| Technology | Purpose |
+|---|---|
+| Python | Main programming language |
+| YOLO26 | Object detection model |
+| Kubeflow Pipelines | ML pipeline orchestration |
+| Kubernetes | Container orchestration |
+| Kind | Local Kubernetes cluster |
+| Docker | Building and running container images |
+| Argo CD | GitOps and Kubernetes deployment management |
+| PersistentVolumeClaim (PVC) | Persistent storage for datasets and model artifacts |
+| ONNX | Optimized model export format |
+| Git & GitHub | Source code management and version control |
+
+## 3. Project Architecture
+
+The project uses Kubeflow to execute Machine Learning components and Kubernetes to manage the infrastructure.
+
+Argo CD monitors the GitHub repository and synchronizes Kubernetes manifests with the cluster.
+
+```text
+                  GitHub Repository
+                         |
+                         |
+                       Argo CD
+                         |
+                         |
+                Kubernetes Resources
+                         |
+                         |
+                  Kubeflow Pipelines
+                         |
+                         |
+                    Pipeline.py
+                         |
+        +----------------+----------------+
+        |                |                |
+        v                v                v
+  Data Preparation  Model Development  Model Training
+                                           |
+                                           v
+                                    Model Optimization
+                                           |
+                                           v
+                                      Model Registry
+                                           |
+                                           v
+                                   Model Artifacts
+                                           |
+                                           v
+                                  Persistent Storage
+```
+
+### Important Architecture Detail
+
+Argo CD and Kubeflow have different responsibilities.
+
+- **Kubeflow:** Executes the Machine Learning pipeline.
+- **Argo CD:** Deploys and manages Kubernetes resources from Git.
+- **Kubernetes:** Runs and manages containers and other resources.
+- **Docker:** Packages the application and its dependencies.
+- **PVC:** Provides shared persistent storage to pipeline components.
+
+Argo CD does not automatically execute `pipeline.py` or `pipeline.yaml`. A Kubeflow pipeline run must be submitted separately through the Kubeflow UI, SDK, API, or an additional automation mechanism.
+
+## 4. Kubeflow Pipeline Stages
+
+### Stage 1: Data Preparation
+
+This stage prepares the dataset before model training.
+
+Main responsibilities:
+
+- Extract the dataset.
+- Check the dataset directory structure.
+- Validate training and validation images.
+- Check annotation and label files.
+- Prepare the dataset configuration.
+- Make the prepared dataset available to subsequent stages.
+
+The COCO128 dataset was used during development and testing.
+
+A successful data-preparation execution reported:
+
+- 128 training images.
+- 128 validation images.
+- 128 training label files.
+- 128 validation label files.
+- 80 classes.
+- 941 annotations.
+
+Dataset validation should be performed before starting the training stage.
+
+### Stage 2: Model Development
+
+This stage prepares the YOLO26 model for training.
+
+Main responsibilities:
+
+- Load the YOLO26 model.
+- Configure model parameters.
+- Prepare the model for the training process.
+- Make the required model artifacts available to the training component.
+
+The pretrained `yolo26n.pt` model is used in the project.
+
+### Stage 3: Model Training
+
+This stage trains the model using the prepared dataset.
+
+Main responsibilities:
+
+- Load the prepared dataset.
+- Load the YOLO26 model.
+- Configure training parameters.
+- Execute model training.
+- Save trained model artifacts.
+- Generate training information and metrics.
+
+Expected outputs include:
+
+- `best.pt`
+- Training metadata such as `training_info.json`
+- Other training artifacts generated by the training framework.
+
+Training metrics and model performance must be checked after every successful run.
+
+### Stage 4: Model Optimization
+
+This stage exports the trained model into an optimized inference format.
+
+The project includes ONNX export.
+
+Main responsibilities:
+
+- Load the trained model.
+- Export the model to ONNX.
+- Verify that the exported file exists.
+- Test that the exported model can be loaded.
+- Compare inference results with the original model.
+- Evaluate inference performance.
+
+An earlier export test successfully generated an ONNX model using ONNX Runtime 1.31.1 and opset 18. The output file was approximately 9.47 MB.
+
+Export success alone does not prove that the optimized model has equivalent accuracy or better inference performance. These tests remain important.
+
+### Stage 5: Model Registry
+
+This stage is responsible for organizing and maintaining model artifacts.
+
+Main responsibilities:
+
+- Store trained model files.
+- Maintain model metadata.
+- Organize model versions.
+- Keep track of model information.
+- Make registered models available for later retrieval.
+
+The project contains a separate Model Registry component. Successful end-to-end registration and retrieval still need to be verified.
+
+## 5. Repository Structure
+
+The main project structure is:
+
+```text
+kubepipeline/
+│
+├── components/
+│   ├── data_preparation.py
+│   ├── model_development.py
+│   ├── model_training.py
+│   ├── model_optimization.py
+│   ├── model_registry.py
+│   └── model_serving.py
+│
+├── configs/
+│   └── data.yaml
+│
+├── archive/
+│
+├── models/
+│
+├── outputs/
+│
+├── model_registry/
+│
+├── k8s/
+│   └── project-info.yaml
+│
+├── pipeline.py
+├── pipeline.yaml
+├── requirements.txt
+├── workspace-pvc.yaml
+├── yolo26n.pt
+└── README.md
+```
+
+### Important Files
+
+| File | Description |
+|---|---|
+| `pipeline.py` | Defines the Kubeflow pipeline and its components |
+| `pipeline.yaml` | Compiled Kubeflow pipeline specification |
+| `requirements.txt` | Python dependencies |
+| `configs/data.yaml` | Dataset configuration |
+| `workspace-pvc.yaml` | Kubernetes persistent storage configuration |
+| `components/` | Individual Machine Learning components |
+| `k8s/` | Kubernetes manifests managed by Argo CD |
+| `yolo26n.pt` | YOLO26 pretrained weights |
+
+Generated files, datasets, and model artifacts may change as the project develops.
+
+## 6. Environment Setup
+
+The development environment uses Ubuntu and a local Kind Kubernetes cluster.
+
+### Step 1: Clone the Repository
+
+```bash
+git clone https://github.com/abdulrehmna-Gith/kubeflow-project.git
+
+cd kubeflow-project
+```
+
+### Step 2: Create a Python Virtual Environment
+
+```bash
+python3 -m venv kubenv
+
+source kubenv/bin/activate
+```
+
+### Step 3: Install Dependencies
+
+```bash
+pip install --upgrade pip
+
+pip install -r requirements.txt
+```
+
+### Step 4: Check Kubernetes
+
+```bash
+kubectl config current-context
+
+kubectl get nodes
+```
+
+The development cluster uses:
+
+```text
+kind-kube-pipeline
+```
+
+Make sure you are working with the correct Kubernetes context before executing deployment commands.
+
+### Step 5: Check Kubeflow
+
+```bash
+kubectl get pods -n kubeflow
+```
+
+Check the workspace PVC:
+
+```bash
+kubectl get pvc -n kubeflow
+```
+
+The project uses:
+
+```text
+PVC Name: yolo26-workspace
+Namespace: kubeflow
+Storage: 5Gi
+Access Mode: ReadWriteOnce
+Mount Path: /workspace
+```
+
+The PVC is used to share project files and artifacts between pipeline components.
+
+**Warning:** Do not delete the existing PVC without checking its contents. It may contain important datasets, models, and pipeline outputs.
+
+## 7. Running the Kubeflow Pipeline
+
+### Step 1: Check the Pipeline Files
+
+```bash
+ls -la
+
+ls -la components/
+```
+
+### Step 2: Verify the Pipeline Image
+
+The pipeline uses a container image for executing its components.
+
+The image used in the current pipeline design is:
+
+```text
+yolo26-kfp:1.0
+```
+
+Verify that the image referenced in `pipeline.py` exists and is available to the Kubernetes nodes.
+
+If you update dependencies or component code, rebuild the image and make the updated image available to the Kind cluster.
+
+### Step 3: Compile the Pipeline
+
+If you modify `pipeline.py`, compile it again:
+
+```bash
+python pipeline.py
+```
+
+Verify that the compiled `pipeline.yaml` is updated.
+
+### Step 4: Open Kubeflow Pipelines UI
+
+Run:
+
+```bash
+kubectl port-forward -n kubeflow svc/ml-pipeline-ui 8080:80
+```
+
+Open the following address:
+
+```text
+http://localhost:8080
+```
+
+Keep the terminal running while accessing the dashboard.
+
+### Step 5: Submit a Pipeline Run
+
+Use the Kubeflow Pipelines UI to upload or select the compiled pipeline specification and create a run.
+
+Monitor the execution of all five stages.
+
+### Step 6: Check Pipeline Pods
+
+```bash
+kubectl get pods -n kubeflow
+```
+
+To watch pods continuously:
+
+```bash
+kubectl get pods -n kubeflow -w
+```
+
+If a component fails, inspect its logs and events before changing the code.
+
+## 8. Argo CD Setup and GitOps
+
+Argo CD is used to implement GitOps for Kubernetes resources.
+
+The GitHub repository is connected to Argo CD, and the Application monitors the `k8s/` directory.
+
+### Argo CD Configuration
+
+| Setting | Value |
+|---|---|
+| Application Name | `yolo26-gitops` |
+| Namespace | `argocd` |
+| Git Repository | `https://github.com/abdulrehmna-Gith/kubeflow-project.git` |
+| Branch | `main` |
+| Repository Path | `k8s` |
+| Destination Namespace | `kubeflow` |
+| Sync Policy | Manual |
+
+### Check Argo CD Pods
+
+```bash
+kubectl get pods -n argocd
+```
+
+### Open Argo CD Dashboard
+
+```bash
+kubectl port-forward svc/argocd-server -n argocd 8081:443
+```
+
+Open:
+
+```text
+https://localhost:8081
+```
+
+The local installation may display a self-signed certificate warning.
+
+### GitOps Workflow
+
+The workflow is:
+
+1. Make a Kubernetes manifest change.
+2. Commit the change to Git.
+3. Push the change to GitHub.
+4. Argo CD detects the repository change.
+5. Review the differences in the Argo CD dashboard.
+6. Synchronize the Application.
+7. Verify the deployed Kubernetes resources.
+
+Example:
+
+```bash
+git add k8s/
+
+git commit -m "Update Kubernetes configuration"
+
+git push origin main
+```
+
+The current Argo CD test manifest is:
+
+```text
+k8s/project-info.yaml
+```
+
+It creates a ConfigMap named:
+
+```text
+yolo26-project-info
+```
+
+Verify it:
+
+```bash
+kubectl get configmap yolo26-project-info -n kubeflow
+```
+
+**Important:** Keep the Argo CD sync policy Manual while testing. Review changes before applying them, especially when working with storage resources such as PVCs.
+
+## 9. Problems Encountered and Debugging Guide
+
+During development, different problems can occur in Docker, Kubernetes, Kubeflow, Python dependencies, model training, and storage.
+
+The following sections document issues encountered during this project and useful debugging methods.
+
+### Problem 1: KFP Dependency Installation Failure
+
+**Issue:**
+
+A pipeline component attempted to install `kfp==2.18.0` during runtime.
+
+The installation failed because the component environment could not access the package index through the network.
+
+A related error was:
+
+```text
+ModuleNotFoundError: No module named 'kfp'
+```
+
+**Reason:**
+
+Lightweight components can require runtime installation of their declared dependencies. If the Kubernetes environment cannot access the internet, package installation may fail.
+
+**Solution used:**
+
+The pipeline design was changed to use container-based components instead of relying on runtime package installation.
+
+The project image contains the required dependencies and component code.
+
+**Debugging:**
+
+```bash
+kubectl get pods -n kubeflow
+
+kubectl describe pod <pod-name> -n kubeflow
+
+kubectl logs <pod-name> -n kubeflow
+```
+
+Check:
+
+- Whether the correct image is configured.
+- Whether the image contains all required packages.
+- Whether the image is available to the Kind node.
+- Whether the component is using the expected execution method.
+
+### Problem 2: Dataset Path Not Found
+
+**Possible error:**
+
+```text
+FileNotFoundError
+```
+
+**Reason:**
+
+The dataset may exist on the host machine but not at the path expected inside the Kubernetes container.
+
+A Kubernetes container cannot automatically access a host directory such as:
+
+```text
+/home/abdul-rehman/Desktop/kubepipeline
+```
+
+The component must use the mounted PVC path.
+
+**Debugging:**
+
+```bash
+kubectl get pvc -n kubeflow
+
+kubectl describe pvc yolo26-workspace -n kubeflow
+```
+
+Check:
+
+- Whether the PVC is Bound.
+- Whether the PVC is mounted in the component.
+- Whether the dataset exists inside `/workspace`.
+- Whether `data.yaml` points to valid dataset directories.
+- Whether training and validation paths are correct.
+
+### Problem 3: Permission Denied While Writing Files
+
+**Issue:**
+
+A component encountered a permission problem while writing model metadata, including a file such as:
+
+```text
+models/model_info.json
+```
+
+**Reason:**
+
+Files on the shared PVC may have ownership or permissions that prevent the component's container user from modifying them.
+
+**Debugging:**
+
+Inside a running pod, check:
+
+```bash
+id
+
+ls -ld /workspace
+
+ls -ld /workspace/project
+
+ls -ld /workspace/project/models
+```
+
+Use:
+
+```bash
+kubectl exec -it <pod-name> -n kubeflow -- bash
+```
+
+If the container does not contain Bash, use `sh`.
+
+**Solution:**
+
+Check ownership and permissions of the exact directory or file that is failing.
+
+Correct permissions for the intended container user. Avoid using `chmod -R 777` as a permanent solution.
+
+### Problem 4: Incorrect Dataset YAML Path
+
+**Issue:**
+
+The dataset existed, but the training component could not correctly read the dataset configuration.
+
+**Reason:**
+
+The training library expects a valid dataset YAML file path, but an incorrect path or unresolved configuration value may have been passed.
+
+**Solution:**
+
+Use the resolved dataset YAML path when calling the training process.
+
+**Debugging:**
+
+Print the final path before starting training.
+
+Verify:
+
+- The YAML file exists.
+- The YAML file is readable.
+- The `train` path is valid.
+- The `val` path is valid.
+- Class names and class counts match the dataset.
+
+### Problem 5: ONNX Export Dependency Error
+
+**Issue:**
+
+The ONNX export process attempted to install missing dependencies and indicated that the runtime needed to be restarted or the export retried.
+
+**Reason:**
+
+The container did not have all required export dependencies installed before the export started.
+
+**Solution:**
+
+Install and pin the required dependencies in the project Docker image.
+
+Rebuild the image after changing dependencies.
+
+**Debugging:**
+
+Check:
+
+- Whether the ONNX file was generated.
+- Whether the file is non-empty.
+- Whether ONNX Runtime can load the file.
+- Whether the exported model produces valid predictions.
+- Whether its output matches the original model.
+
+### Problem 6: Kubernetes Pod Stuck in Pending or ContainerCreating
+
+**Possible symptoms:**
+
+```text
+Pending
+ContainerCreating
+ImagePullBackOff
+ErrImagePull
+```
+
+**Reason:**
+
+Possible causes include:
+
+- Image unavailable to the cluster.
+- Incorrect image name or tag.
+- PVC not mounted correctly.
+- Insufficient cluster resources.
+- Scheduling problems.
+- Container initialization failures.
+
+**Debugging:**
+
+```bash
+kubectl get pods -n kubeflow
+
+kubectl describe pod <pod-name> -n kubeflow
+
+kubectl get events -n kubeflow --sort-by=.lastTimestamp
+```
+
+Read the Events section of the pod description to identify the actual problem.
+
+### Problem 7: Port Already in Use
+
+**Issue:**
+
+When starting Uvicorn or a Kubernetes port-forward, an error may occur:
+
+```text
+Address already in use
+```
+
+**Reason:**
+
+Another process is already listening on the selected local port.
+
+**Solution:**
+
+Use another available local port or stop the previous process if it is no longer required.
+
+For example:
+
+```bash
+kubectl port-forward -n kubeflow svc/ml-pipeline-ui 8082:80
+```
+
+### Problem 8: Argo CD CRD Installation Error
+
+**Issue:**
+
+During Argo CD installation, the following error occurred:
+
+```text
+metadata.annotations: Too long: must have at most 262144 bytes
+```
+
+The affected resource was:
+
+```text
+applicationsets.argoproj.io
+```
+
+**Reason:**
+
+Client-side apply attempted to store a large manifest in the resource's last-applied configuration annotation.
+
+**Solution used:**
+
+The installation was completed using server-side apply:
+
+```bash
+kubectl apply --server-side -n argocd \
+-f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+```
+
+After that, the Argo CD pods became healthy.
+
+### Problem 9: Argo CD Application Shows Missing or OutOfSync
+
+**Issue:**
+
+The Argo CD dashboard may display:
+
+```text
+Missing
+```
+
+or:
+
+```text
+OutOfSync
+```
+
+**Meaning:**
+
+- `Missing`: The desired resource is not present in the cluster.
+- `OutOfSync`: The live resource differs from the configuration stored in Git.
+
+**Debugging:**
+
+1. Open the Application in Argo CD.
+2. Inspect the resource tree.
+3. Review the resource differences.
+4. Check the repository URL.
+5. Verify the branch is `main`.
+6. Verify the application path is `k8s`.
+7. Review the destination namespace.
+8. Synchronize only after checking the changes.
+
+Do not delete existing PVCs or stateful resources just to resolve an OutOfSync status.
+
+### Problem 10: Confusing Kubernetes Resources with Containers
+
+**Issue:**
+
+The Argo CD dashboard displays objects such as:
+
+```text
+yolo26-gitops
+yolo26-project-info
+```
+
+These may look like running containers.
+
+**Explanation:**
+
+They are different Kubernetes resource types:
+
+- `yolo26-gitops` is an Argo CD Application.
+- `yolo26-project-info` is a ConfigMap.
+- Pods are the resources that run containers.
+
+Use:
+
+```bash
+kubectl get applications -n argocd
+
+kubectl get configmaps -n kubeflow
+
+kubectl get pods -n kubeflow
+```
+
+This helps distinguish Applications, ConfigMaps, Pods, and containers.
+
+## 10. Useful Debugging Commands
+
+### Kubernetes
+
+```bash
+kubectl config current-context
+
+kubectl get nodes
+
+kubectl get namespaces
+
+kubectl get pods -n kubeflow
+
+kubectl get pods -n argocd
+
+kubectl get pvc -n kubeflow
+
+kubectl get services -n kubeflow
+```
+
+### Pod Debugging
+
+```bash
+kubectl describe pod <pod-name> -n kubeflow
+
+kubectl logs <pod-name> -n kubeflow
+
+kubectl logs <pod-name> -n kubeflow --previous
+
+kubectl get events -n kubeflow --sort-by=.lastTimestamp
+```
+
+### Argo CD
+
+```bash
+kubectl get applications -n argocd
+
+kubectl get pods -n argocd
+
+kubectl get configmap yolo26-project-info -n kubeflow
+```
+
+### Git
+
+```bash
+git status
+
+git log --oneline
+
+git add .
+
+git commit -m "Describe your changes"
+
+git push origin main
+```
+
+## 11. Current Project Status
+
+The following table tracks the current implementation.
+
+| Component | Status |
+|---|---|
+| Ubuntu development environment | Set up |
+| Kind Kubernetes cluster | Set up |
+| Kubeflow environment | Set up |
+| Shared workspace PVC | Created and Bound |
+| Data Preparation | Successfully tested |
+| Model Development | Component implemented; end-to-end verification pending |
+| Model Training | Previously tested; metrics reporting needs improvement |
+| Model Optimization | ONNX export previously tested; equivalence and performance validation pending |
+| Model Registry | Component implemented; end-to-end registration verification pending |
+| Argo CD installation | Successful |
+| GitHub repository connection | Successful |
+| Argo CD Application | Created |
+| GitOps ConfigMap deployment | Successful and Healthy |
+| Automatic Kubeflow pipeline triggering from GitHub | Not configured |
+| Model Serving deployment | Further deployment and testing required |
+
+## 12. Future Improvements
+
+The following tasks can improve the project:
+
+1. Execute the complete five-stage pipeline successfully in one Kubeflow run.
+2. Improve training metrics collection and reporting.
+3. Validate ONNX model accuracy against the original YOLO26 model.
+4. Benchmark model inference speed and resource usage.
+5. Complete model registration and version management.
+6. Deploy the model-serving component.
+7. Add Kubernetes Deployment and Service manifests for model serving.
+8. Manage those Kubernetes resources through Argo CD.
+9. Configure automated pipeline triggering from GitHub if required.
+10. Add monitoring, logging, and model performance tracking.
+
+## 13. GitHub Repository
+
+Source code and project development:
+
+[YOLO26 Kubeflow Pipeline Repository](https://github.com/abdulrehmna-Gith/kubeflow-project)
+
+---
+
+**Project Goal:** Build a modular, reproducible, and automated YOLO26 object-detection workflow using Kubeflow Pipelines and Kubernetes, with Argo CD providing GitOps-based infrastructure management.
